@@ -93,6 +93,21 @@
 
       FirebaseArray.prototype = {
 
+        /**
+         * Converts an element of the array into JSON.
+         * By that we mean not a string but rather just the object
+         * that will be sent to Firebase.
+         * By default it just copies all values from this object onto
+         * the data that will go to Firebase
+         * The JSON sent to the Firebase will always have any keys prefixed with
+         * '$' stripped from it.
+         *
+         * This method is always called with "this" as "this". Important: this
+         * means that the individual record is not the this for $toJSON.
+         * @param rec The object to covert to JSON - it will be an element of
+         * this array
+         * @return This array element in JSON
+         */
         $toJSON: function(rec) {
           var dat;
           if( !angular.isObject(rec) ) {
@@ -105,6 +120,13 @@
           return dat;
         },
 
+        /**
+         * Converts a snapshot into the data that will make up this object
+         * By Default it just provides the value of the snapshot
+         *
+         * @param snap the snapshot from the Firebase
+         * @return data that will make up the object
+         */
         $fromJSON: function(snap) {
           return snap.val();
         },

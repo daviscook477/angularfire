@@ -10,6 +10,10 @@
    *    $$notify - called to update $watch listeners and trigger updates to 3-way bindings
    *    $ref - called to obtain the underlying Firebase reference
    *
+   * Methods that may be desireable to provide changes to are
+   *    $toJSON - called to make the object into the JSON that will be sent to firebase
+   *    $fromJSON - called to make the object from the JSON sent to the firebase
+   *
    * Instead of directly modifying this class, one should generally use the $extend
    * method to add or change how methods behave:
    *
@@ -25,17 +29,6 @@
   angular.module('firebase').factory('$firebaseObject', [
     '$parse', '$firebaseUtils', '$log',
     function($parse, $firebaseUtils, $log) {
-
-      function stripDollarPrefixedKeys(data) {
-        if( !angular.isObject(data) ) { return data; }
-        var out = angular.isArray(data)? [] : {};
-        angular.forEach(data, function(v,k) {
-          if(typeof k !== 'string' || k.charAt(0) !== '$') {
-            out[k] = stripDollarPrefixedKeys(v);
-          }
-        });
-        return out;
-      }
 
       /**
        * Creates a synchronized object with 2-way bindings between Angular and Firebase.
@@ -79,6 +72,19 @@
 
       FirebaseObject.prototype = {
 
+        /**
+         * Converts an object into JSON.
+         * By that we mean not a string but rather just the object
+         * that will be sent to Firebase.
+         * By default it just copies all values from this object onto
+         * the data that will go to Firebase
+         * The JSON sent to the Firebase will always have any keys prefixed with
+         * '$' stripped from it.
+         *
+         * This method is always called with "this" as "this"
+         * @param rec The object to covert to JSON - it should be this object
+         * @return This object in JSON
+         */
         $toJSON: function(rec) {
           var dat;
           if( !angular.isObject(rec) ) {
@@ -86,11 +92,18 @@
           }
           dat = {};
           $firebaseUtils.each(rec, function (v, k) {
-            dat[k] = stripDollarPrefixedKeys(v);
+            dat[k] = v;
           });
           return dat;
         },
 
+        /**
+         * Converts a snapshot into the data that will make up this object
+         * By Default it just provides the value of the snapshot
+         *
+         * @param snap the snapshot from the Firebase
+         * @return data that will make up the object
+         */
         $fromJSON: function(snap) {
           return snap.val();
         },
