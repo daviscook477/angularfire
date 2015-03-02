@@ -317,10 +317,12 @@
             return data;
           },
 
-          updateRec: function(rec, snap) {
+          updateRec: function(rec, snap, $fromJSON, context) {
             var data = snap.val();
             var oldData = angular.extend({}, rec);
-
+            if (angular.isFunction($fromJSON)) {
+              data = $fromJSON.apply(context, [snap]);
+            }
             // deal with primitives
             if( !angular.isObject(data) ) {
               rec.$value = data;
@@ -329,15 +331,13 @@
             else {
               delete rec.$value;
             }
-
             // apply changes: remove old keys, insert new data, set priority
             utils.trimKeys(rec, data);
             angular.extend(rec, data);
             rec.$priority = snap.getPriority();
-
             return !angular.equals(oldData, rec) ||
-              oldData.$value !== rec.$value ||
-              oldData.$priority !== rec.$priority;
+            oldData.$value !== rec.$value ||
+            oldData.$priority !== rec.$priority;
           },
 
           applyDefaults: function(rec, defaults) {
@@ -393,43 +393,46 @@
            * which we can save into Firebase. It asserts valid
            * keys and strips off any items prefixed with $.
            *
-           * If the rec passed into this method has a toJSON()
-           * method, that will be used in place of the custom
-           * functionality here.
+           * If a $toJSON method is provided, it will be used
+           * in place of the custom functionality here.
+           * Valid keys will still be asserted and correct
+           * .priority and .value will still be set
            *
-           * @param rec
-           * @returns {*}
+           * @param rec {Object}
+           * @param $toJSON {Function}
+           * @param context {Object} the context from which $toJSON will be called
+           * @returns {*} the object converted to JSON for the Firebase.
            */
-          toJSON: function(rec) {
-            var dat;
-            if( !angular.isObject(rec) ) {
-              rec = {$value: rec};
-            }
-            if (angular.isFunction(rec.toJSON)) {
-              dat = rec.toJSON();
-            }
-            else {
-              dat = {};
-              utils.each(rec, function (v, k) {
-                dat[k] = stripDollarPrefixedKeys(v);
-              });
-            }
-            if( angular.isDefined(rec.$value) && Object.keys(dat).length === 0 && rec.$value !== null ) {
-              dat['.value'] = rec.$value;
-            }
-            if( angular.isDefined(rec.$priority) && Object.keys(dat).length > 0 && rec.$priority !== null ) {
-              dat['.priority'] = rec.$priority;
-            }
-            angular.forEach(dat, function(v,k) {
-              if (k.match(/[.$\[\]#\/]/) && k !== '.value' && k !== '.priority' ) {
-                throw new Error('Invalid key ' + k + ' (cannot contain .$[]#)');
-              }
-              else if( angular.isUndefined(v) ) {
-                throw new Error('Key '+k+' was undefined. Cannot pass undefined in JSON. Use null instead.');
-              }
-            });
-            return dat;
-          },
+           toJSON: function(rec, $toJSON, context) {
+             var dat;
+             if( !angular.isObject(rec) ) {
+               rec = {$value: rec};
+             }
+             if (angular.isFunction($toJSON)) {
+               dat = $toJSON.apply(context, [rec]);
+             }
+             else {
+               dat = {};
+               utils.each(rec, function (v, k) {
+                 dat[k] = stripDollarPrefixedKeys(v);
+               });
+             }
+             if( angular.isDefined(rec.$value) && Object.keys(dat).length === 0 && rec.$value !== null ) {
+               dat['.value'] = rec.$value;
+             }
+             if( angular.isDefined(rec.$priority) && Object.keys(dat).length > 0 && rec.$priority !== null ) {
+               dat['.priority'] = rec.$priority;
+             }
+             angular.forEach(dat, function(v,k) {
+               if (k.match(/[.$\[\]#\/]/) && k !== '.value' && k !== '.priority' ) {
+                 throw new Error('Invalid key ' + k + ' (cannot contain .$[]#)');
+               }
+               else if( angular.isUndefined(v) ) {
+                 throw new Error('Key '+k+' was undefined. Cannot pass undefined in JSON. Use null instead.');
+               }
+             });
+             return dat;
+           },
 
           doSet: function(ref, data) {
             var def = utils.defer();

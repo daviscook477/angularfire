@@ -1,8 +1,6 @@
 exports.config = {
   // Locally, we should just use the default standalone Selenium server
   // In Travis, we set up the Selenium serving via Sauce Labs
-  sauceUser: process.env.SAUCE_USERNAME,
-  sauceKey: process.env.SAUCE_ACCESS_KEY,
 
   // Tests to run
   specs: [
@@ -12,10 +10,7 @@ exports.config = {
   // Capabilities to be passed to the webdriver instance
   // For a full list of available capabilities, see https://code.google.com/p/selenium/wiki/DesiredCapabilities
   capabilities: {
-    'browserName': 'firefox',
-    'tunnel-identifier': process.env.TRAVIS_JOB_NUMBER,
-    'build': process.env.TRAVIS_BUILD_NUMBER,
-    'name': 'AngularFire Protractor Tests Build ' + process.env.TRAVIS_BUILD_NUMBER
+    'browserName': process.env.TRAVIS ? 'firefox' : 'chrome'
   },
 
   // Calls to protractor.get() with relative paths will be prepended with the baseUrl
@@ -23,16 +18,6 @@ exports.config = {
 
   // Selector for the element housing the angular app
   rootElement: 'body',
-
-  // Options to be passed to Jasmine-node.
-  onPrepare: function() {
-    require('jasmine-spec-reporter');
-    // add jasmine spec reporter
-    jasmine.getEnv().addReporter(new jasmine.SpecReporter({
-      displaySkippedSpec: true,
-      displaySpecDuration: true
-    }));
-  },
 
   // Options to be passed to minijasminenode
   jasmineNodeOpts: {

@@ -4,7 +4,7 @@
 module.exports = function(config) {
   config.set({
     frameworks: ['jasmine'],
-    browsers: ['Firefox'],
+    browsers: ['Chrome'],
     reporters: ['spec', 'failed'],
     autowatch: false,
     singleRun: false,

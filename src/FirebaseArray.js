@@ -92,6 +92,23 @@
       }
 
       FirebaseArray.prototype = {
+
+        $toJSON: function(rec) {
+          var dat;
+          if( !angular.isObject(rec) ) {
+            rec = {$value: rec};
+          }
+          dat = {};
+          $firebaseUtils.each(rec, function (v, k) {
+            dat[k] = v;
+          });
+          return dat;
+        },
+
+        $fromJSON: function(snap) {
+          return snap.val();
+        },
+
         /**
          * Create a new record with a unique ID and add it to the end of the array.
          * This should be used instead of Array.prototype.push, since those changes will not be
@@ -111,7 +128,7 @@
           this._assertNotDestroyed('$add');
           var def = $firebaseUtils.defer();
           var ref = this.$ref().ref().push();
-          ref.set($firebaseUtils.toJSON(data), $firebaseUtils.makeNodeResolver(def));
+          ref.set($firebaseUtils.toJSON(data, this.$toJSON, this), $firebaseUtils.makeNodeResolver(def));
           return def.promise.then(function() {
             return ref;
           });
@@ -138,7 +155,7 @@
           var key = self.$keyAt(item);
           if( key !== null ) {
             var ref = self.$ref().ref().child(key);
-            var data = $firebaseUtils.toJSON(item);
+            var data = $firebaseUtils.toJSON(item, self.$toJSON, self);
             return $firebaseUtils.doSet(ref, data).then(function() {
               self.$$notify('child_changed', key);
               return ref;
@@ -308,14 +325,10 @@
           var i = this.$indexFor($firebaseUtils.getKey(snap));
           if( i === -1 ) {
             // parse data and create record
-            var rec = snap.val();
-            if( !angular.isObject(rec) ) {
-              rec = { $value: rec };
-            }
+            var rec = {};
             rec.$id = $firebaseUtils.getKey(snap);
-            rec.$priority = snap.getPriority();
+            $firebaseUtils.updateRec(rec, snap, this.$fromJSON, this);
             $firebaseUtils.applyDefaults(rec, this.$$defaults);
-
             return rec;
           }
           return false;
@@ -353,7 +366,7 @@
           var rec = this.$getRecord($firebaseUtils.getKey(snap));
           if( angular.isObject(rec) ) {
             // apply changes to the record
-            changed = $firebaseUtils.updateRec(rec, snap);
+            changed = $firebaseUtils.updateRec(rec, snap, this.$fromJSON, this);
             $firebaseUtils.applyDefaults(rec, this.$$defaults);
           }
           return changed;

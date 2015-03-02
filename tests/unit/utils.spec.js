@@ -136,6 +136,29 @@ describe('$firebaseUtils', function () {
       $utils.updateRec(rec, testutils.snap({bar: 'baz', baz:'foo'}));
       expect(rec).toEqual({bar: 'baz', baz: 'foo', $id: 'foo', $priority: null});
     });
+
+    it('should use $fromJSON if it is provided', function() {
+      var json = {json: true};
+      var spy = jasmine.createSpy().and.callFake(function() {
+        return json;
+      });
+      var snap = testutils.snap({bar: 'baz', baz:'foo'}), rec = {};
+      $utils.updateRec(rec, snap, spy)
+      var expected = {json: true, $priority: null};
+      expect(rec).toEqual(expected);
+      expect(spy).toHaveBeenCalled();
+    });
+
+    it('should use context if it is provided', function() {
+      var a = {}, b;
+      var spy = jasmine.createSpy().and.callFake(function() {
+        b = this;
+      });
+      var snap = testutils.snap({bar: 'baz', baz:'foo'});
+      var rec = {};
+      $utils.updateRec(rec, snap, spy, a);
+      expect(b).toBe(a);
+    });
   });
 
   describe('#scopeData',function(){
@@ -176,15 +199,22 @@ describe('$firebaseUtils', function () {
   });
 
   describe('#toJSON', function() {
-    it('should use toJSON if it exists', function() {
+    it('should use $toJSON if it is provided', function() {
       var json = {json: true};
-      var spy = jasmine.createSpy('toJSON').and.callFake(function() {
+      var spy = jasmine.createSpy().and.callFake(function() {
         return json;
       });
-      var F = function() {};
-      F.prototype.toJSON = spy;
-      expect($utils.toJSON(new F())).toEqual(json);
+      expect($utils.toJSON({}, spy)).toEqual(json);
       expect(spy).toHaveBeenCalled();
+    });
+
+    it('should use context if it is provided', function() {
+      var a = {}, b;
+      var spy = jasmine.createSpy().and.callFake(function() {
+        b = this;
+      });
+      $utils.toJSON({}, spy, a);
+      expect(b).toBe(a);
     });
 
     it('should use $value if found', function() {

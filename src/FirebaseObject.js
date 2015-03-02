@@ -25,6 +25,18 @@
   angular.module('firebase').factory('$firebaseObject', [
     '$parse', '$firebaseUtils', '$log',
     function($parse, $firebaseUtils, $log) {
+
+      function stripDollarPrefixedKeys(data) {
+        if( !angular.isObject(data) ) { return data; }
+        var out = angular.isArray(data)? [] : {};
+        angular.forEach(data, function(v,k) {
+          if(typeof k !== 'string' || k.charAt(0) !== '$') {
+            out[k] = stripDollarPrefixedKeys(v);
+          }
+        });
+        return out;
+      }
+
       /**
        * Creates a synchronized object with 2-way bindings between Angular and Firebase.
        *
@@ -66,6 +78,24 @@
       }
 
       FirebaseObject.prototype = {
+
+        $toJSON: function(rec) {
+          var dat;
+          if( !angular.isObject(rec) ) {
+            rec = {$value: rec};
+          }
+          dat = {};
+          $firebaseUtils.each(rec, function (v, k) {
+            dat[k] = stripDollarPrefixedKeys(v);
+          });
+          return dat;
+        },
+
+        $fromJSON: function(snap) {
+          return snap.val();
+        },
+
+
         /**
          * Saves all data on the FirebaseObject back to Firebase.
          * @returns a promise which will resolve after the save is completed.
@@ -73,7 +103,7 @@
         $save: function () {
           var self = this;
           var ref = self.$ref();
-          var data = $firebaseUtils.toJSON(self);
+          var data = $firebaseUtils.toJSON(self, self.$toJSON, self);
           return $firebaseUtils.doSet(ref, data).then(function() {
             self.$$notify();
             return self.$ref();
@@ -201,7 +231,7 @@
          */
         $$updated: function (snap) {
           // applies new data to this object
-          var changed = $firebaseUtils.updateRec(this, snap);
+          var changed = $firebaseUtils.updateRec(this, snap, this.$fromJSON, this);
           // applies any defaults set using $$defaults
           $firebaseUtils.applyDefaults(this, this.$$defaults);
           // returning true here causes $$notify to be triggered
@@ -229,7 +259,7 @@
           // we use a one-directional loop to avoid feedback with 3-way bindings
           // since set() is applied locally anyway, this is still performant
           var def = $firebaseUtils.defer();
-          this.$ref().set($firebaseUtils.toJSON(newData), $firebaseUtils.makeNodeResolver(def));
+          this.$ref().set($firebaseUtils.toJSON(newData, this.$toJSON, this), $firebaseUtils.makeNodeResolver(def));
           return def.promise;
         },
 
