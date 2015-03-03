@@ -348,11 +348,11 @@
           if( i === -1 ) {
             // parse data and create record
             var rec = this.$fromJSON(snap);
+            rec.$id = $firebaseUtils.getKey(snap);
 	    // deal with primitives
  	    if( !angular.isObject(rec) ) {
               rec = {$value: rec};
             }
-            rec.$id = $firebaseUtils.getKey(snap);
             rec.$priority = snap.getPriority();
             $firebaseUtils.applyDefaults(rec, this.$$defaults);
             return rec;
