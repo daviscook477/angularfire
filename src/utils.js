@@ -409,7 +409,7 @@
                rec = {$value: rec};
              }
              if (angular.isFunction($toJSON)) {
-               dat = $toJSON.apply(context, [rec]);
+               dat = $toJSON.apply(context, [rec]); // note! breaks if dat is a primitive
              }
              else {
                dat = {};
